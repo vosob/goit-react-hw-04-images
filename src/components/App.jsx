@@ -17,6 +17,7 @@ class App extends Component {
     isLoading: false,
     showModal: false,
     imageAlt: '',
+    isLoadMoreImages: 'true',
   };
 
   async componentDidUpdate(_, prevState) {
@@ -33,6 +34,7 @@ class App extends Component {
 
         this.setState(prevState => ({
           images: [...prevState.images, ...q.hits],
+          isLoadMoreImages: prevState.page < Math.ceil(q.totalHits / 12),
         }));
       } catch (error) {
         console.log(error);
@@ -48,7 +50,7 @@ class App extends Component {
       return;
     }
 
-    this.setState({ query, images: [] });
+    this.setState({ query, images: [], page: 1 });
   };
 
   handleModalImage = imageUrl => {
@@ -68,7 +70,14 @@ class App extends Component {
   };
 
   render() {
-    const { images, modalImage, showModal, imageAlt, isLoading } = this.state;
+    const {
+      images,
+      modalImage,
+      showModal,
+      imageAlt,
+      isLoading,
+      isLoadMoreImages,
+    } = this.state;
     return (
       <>
         <Searchbar onSubmit={this.handleSearchSubmit} />
@@ -80,7 +89,9 @@ class App extends Component {
             handleModalAlt={this.handleModalAlt}
           />
         )}
-        {images.length > 1 && <Button onClick={this.loadMoreImages} />}
+        {isLoadMoreImages && images.length > 0 && (
+          <Button onClick={this.loadMoreImages} />
+        )}
         {showModal && (
           <Modal onClose={this.toggleModal}>
             <img src={modalImage} alt={imageAlt} />
