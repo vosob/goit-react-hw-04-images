@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useEffect, useState } from 'react';
 import Searchbar from './Searchbar';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -8,99 +8,77 @@ import Button from './Button';
 import Loader from './Loader';
 import Modal from './Modal';
 
-class App extends Component {
-  state = {
-    images: [],
-    query: '',
-    page: 1,
-    modalImage: '',
-    isLoading: false,
-    showModal: false,
-    imageAlt: '',
-    isLoadMoreImages: 'true',
-  };
+const App = () => {
+  const [images, setImages] = useState([]);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [isLoadMoreImages, setIsLoadMoreImages] = useState(true);
+  const [selectedImage, setSelectedImage] = useState('');
 
-  async componentDidUpdate(_, prevState) {
-    const prevName = prevState.query;
-    const nextName = this.state.query;
-
-    const prevPage = prevState.page;
-    const nextPage = this.state.page;
-
-    if (prevName !== nextName || prevPage !== nextPage) {
-      this.setState({ isLoading: true });
-      try {
-        const q = await fetchImages(nextName, this.state.page);
-
-        this.setState(prevState => ({
-          images: [...prevState.images, ...q.hits],
-          isLoadMoreImages: prevState.page < Math.ceil(q.totalHits / 12),
-        }));
-      } catch (error) {
-        console.log(error);
-      } finally {
-        this.setState({ isLoading: false });
-      }
-    }
-  }
-
-  handleSearchSubmit = query => {
+  const handleSearchSubmit = query => {
     if (!query.trim()) {
       toast.warning('Please enter a search request.');
       return;
     }
-
-    this.setState({ query, images: [], page: 1 });
+    setQuery(query);
+    setPage(1);
+    setImages([]);
   };
 
-  handleModalImage = imageUrl => {
-    this.setState({ modalImage: imageUrl });
+  const handleImageClick = imageUrl => {
+    setSelectedImage(imageUrl);
+    setShowModal(true);
   };
 
-  handleModalAlt = event => {
-    this.setState({ imageAlt: event });
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedImage('');
   };
 
-  loadMoreImages = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const loadMoreImages = () => {
+    setPage(prevState => prevState + 1);
   };
 
-  toggleModal = () => {
-    this.setState(({ showModal }) => ({ showModal: !showModal }));
-  };
+  useEffect(() => {
+    if (query === '') {
+      return;
+    }
 
-  render() {
-    const {
-      images,
-      modalImage,
-      showModal,
-      imageAlt,
-      isLoading,
-      isLoadMoreImages,
-    } = this.state;
-    return (
-      <>
-        <Searchbar onSubmit={this.handleSearchSubmit} />
-        {images.length > 0 && (
-          <ImageGallery
-            showModal={this.toggleModal}
-            images={images}
-            handleModalImage={this.handleModalImage}
-            handleModalAlt={this.handleModalAlt}
-          />
-        )}
-        {isLoadMoreImages && images.length > 0 && (
-          <Button onClick={this.loadMoreImages} />
-        )}
-        {showModal && (
-          <Modal onClose={this.toggleModal}>
-            <img src={modalImage} alt={imageAlt} />
-          </Modal>
-        )}
-        <ToastContainer autoClose={3000} />
-        {isLoading && <Loader />}
-      </>
-    );
-  }
-}
+    const fetchData = async () => {
+      setIsLoading(true);
+
+      try {
+        const q = await fetchImages(query, page);
+        setImages(prevImages => [...prevImages, ...q.hits]);
+        setIsLoadMoreImages(page < Math.ceil(q.totalHits / 12));
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData(query, page);
+  }, [query, page]);
+
+  return (
+    <>
+      <Searchbar onSubmit={handleSearchSubmit} />
+      {images.length > 0 && (
+        <ImageGallery showModal={handleImageClick} images={images} />
+      )}
+      {isLoadMoreImages && images.length > 0 && (
+        <Button onClick={loadMoreImages} />
+      )}
+      {showModal && (
+        <Modal onClose={handleCloseModal} imageUrl={selectedImage} />
+      )}
+      <ToastContainer autoClose={3000} />
+      {isLoading && <Loader />}
+    </>
+  );
+};
+
 export default App;
